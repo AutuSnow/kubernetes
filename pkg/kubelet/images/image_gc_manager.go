@@ -499,7 +499,7 @@ func (im *realImageGCManager) freeSpace(ctx context.Context, bytesToFree int64, 
 		imageAge := freeTime.Sub(image.firstDetected)
 		unusedDuration := freeTime.Sub(image.lastUsed)
 
-		// MinAge protection: Don't delete recently pulled images (from firstDetected)
+		// MinAge protection: Don't delete recently pulled images (from firstDetected).
 		if im.policy.MinAge > 0 && imageAge < im.policy.MinAge {
 			imagesLeft = append(imagesLeft, image.id)
 			logger.V(5).Info("Image ID's age is less than the policy's minAge, not eligible for garbage collection", "imageID", image.id, "age", imageAge, "minAge", im.policy.MinAge)
