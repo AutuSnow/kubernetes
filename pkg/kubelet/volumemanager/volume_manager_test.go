@@ -720,13 +720,25 @@ func TestWaitForAllPodsUnmount(t *testing.T) {
 			podManager.SetPods(pods)
 
 			if test.podMode != "" {
+				ready := make(chan struct{}, test.numPods)
+
 				for i := 0; i < test.numPods; i++ {
 					volumeName := v1.UniqueVolumeName(node.Status.VolumesAttached[i].Name)
-					go simulateVolumeInUseUpdate(volumeName, ctx.Done(), manager)
+					go func(vol v1.UniqueVolumeName) {
+						ready <- struct{}{}
+						simulateVolumeInUseUpdate(vol, ctx.Done(), manager)
+					}(volumeName)
 				}
 
+				for i := 0; i < test.numPods; i++ {
+					<-ready
+				}
+				time.Sleep(100 * time.Millisecond)
+				attachCtx, cancelAttach := context.WithTimeout(ctx, 60*time.Second)
+				defer cancelAttach()
+
 				for _, pod := range pods {
-					err := manager.WaitForAttachAndMount(ctx, pod)
+					err := manager.WaitForAttachAndMount(attachCtx, pod)
 					require.NoError(t, err, "Failed to wait for attach and mount for pod %s", pod.Name)
 				}
 			}
